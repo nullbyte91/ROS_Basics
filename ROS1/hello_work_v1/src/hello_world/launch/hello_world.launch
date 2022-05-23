@@ -1,0 +1,7 @@
+<launch>
+    <!-- Load config file -->
+    <rosparam file="$(find hello_world)/config/param.yaml" />
+    <!-- hello world launch file -->
+    <node pkg="hello_world" type="hello_world.py" name="hello_world"  output="screen">
+    </node>
+</launch>
