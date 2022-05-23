@@ -354,3 +354,203 @@ roslaunch image_pipeline image_pipeline.launch
 
 #### output
 ![alt text](./images/image_pipeline_output2.png "output")
+
+## ROS Services Server & Client
+Services are Synchronous. When your ROS node calls a service, the ROS node can't continue until it receives a result from the service.
+
+Use ROS services only for quick actions. For example, enable or disable actuator. Services are defined by a name and pair of messages.
+
+![alt text](./images/Service.png "Service")
+
+### Create a Package
+```bash
+mkdir ~/catkin_ws/src/  # Create a directory
+cd ~/catkin_ws/src/     # Move to src directory
+catkin_create_pkg ros_service rospy cv_bridge image_transport sensor_msgs message_generation message_runtime # Create a package
+```
+
+### Create a Service message
+```bash
+cd ros_service/ && mkdir srv && touch srv/localizeImg.srv
+```
+
+```bash
+localizeImg.srv
+```
+
+```xml
+int64 x
+int64 y
+---
+sensor_msgs/Image image
+```
+
+### CMake changes
+```bash
+add_service_files(
+  FILES
+  localizeImg.srv
+)
+```
+
+### Create Server Node
+```bash
+cd ros_service/ && touch src/server.py # Create a empty file
+chmod a+x src/server.py # Execution permission
+```
+
+```bash
+server.py
+```
+
+```python
+#!/usr/bin/env python3
+import sys
+import rospy
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge, CvBridgeError
+import cv2
+import rospy
+import time
+from ros_service.srv import localizeImg, localizeImgResponse
+
+class Server:
+    def __init__(self):
+        self.bridge = CvBridge()
+        self.video_capture = None
+        self.cam_init()
+        _ = rospy.Service('localize', localizeImg, self.pathPlanning)
+        rospy.spin()
+
+    def cam_init(self):
+        input_type = rospy.get_param("/image_acquisition/input_type")
+        if input_type == "camera_usb":
+            self.video_capture  = cv2.VideoCapture(0)
+        else:
+            video_path = rospy.get_param("/image_acquisition/video/video_path_0")
+            self.video_capture  = cv2.VideoCapture(video_path)
+    
+    def pathPlanning(self, req):
+        print("Move robot to x:{} y:{} position".format(req.x, req.y))
+        time.sleep(2)
+        _, frame = self.video_capture.read()
+        if frame is not None:
+            msg = self.bridge.cv2_to_imgmsg(frame, "bgr8")
+            return msg
+
+def main():
+    rospy.init_node('localize_server')
+    _ = Server()
+
+if __name__ == "__main__":
+    main()
+```
+
+### CMAKE Changes
+```xml
+catkin_install_python(PROGRAMS src/server.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+```
+
+### Create Client Node
+```bash
+cd ros_service/ && touch src/client.py # Create a empty file
+chmod a+x src/client.py # Execution permission
+```
+
+```bash
+client.py
+```
+
+```python
+#!/usr/bin/env python3
+#!/usr/bin/env python3
+import sys
+import rospy
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge, CvBridgeError
+import cv2
+from ros_service.srv import localizeImg, localizeImgResponse
+import rospy
+import time
+import random as rand
+class Client:
+    def __init__(self):
+        rospy.wait_for_service('localize')
+        self.bridge = CvBridge()
+        self.plan_and_getImage()
+
+    def plan_and_getImage(self):
+        frequency = rospy.get_param("/image_acquisition/frequency")
+        rate = rospy.Rate(frequency)
+        while True:
+            localizeImage = rospy.ServiceProxy('localize', localizeImg)
+            x = int(rand.random())
+            y = int(rand.random())
+            image_msg = localizeImage(x, y)
+            cv_image = self.bridge.imgmsg_to_cv2(image_msg.image, "bgr8")
+            cv2.imshow("Display", cv_image)
+            cv2.waitKey(1)
+            rate.sleep()
+
+def main():
+    rospy.init_node('client')
+    _ = Client()
+
+if __name__ == "__main__":
+    main()
+```
+
+### CMAKE Changes
+```xml
+catkin_install_python(PROGRAMS src/server.py src/client.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+```
+
+### Create a config file
+```bash
+cd ~/catkin_ws/src/ros_service/ && mkdir config/ && touch config/param.yaml
+```
+
+```
+config/param.yaml
+```
+
+```xml
+image_acquisition:
+  input_type: "camera_usb" #camera_usb, video
+  
+  camera_usb: 
+      camera_node: 1
+  
+  video:
+      video_node: 1
+      video_path_0: "/home/nullbyte/Desktop/myGit/ROS_Basics/ROS1/test_data/video/test_1.mp4"
+  
+  frequency: 10
+```
+
+### Create a Launch file
+```bash
+mkdir launch && touch launch/ros_service.launch # Create a empty lauch 
+```
+
+```xml
+<launch>
+    <rosparam file="$(find ros_service)/config/param.yaml" />
+    <!-- image_pipeline launch file -->
+    <node pkg="ros_service" type="server.py" name="publisher"  output="screen">
+    </node>
+    <node pkg="ros_service" type="client.py" name="subscriber"  output="screen">
+    </node>
+</launch>
+```
+
+
+
+
+
+
+
