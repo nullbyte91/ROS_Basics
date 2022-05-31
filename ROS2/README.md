@@ -81,6 +81,7 @@ if __name__ == '__main__':
 ### Create a Launch file
 ```bash
 mkdir launch && touch launch/hello_world_launch.py # Create a empty lauch file
+chmod a+x launch/hello_world_launch.py
 ```
 ```bash
 hello_world_launch.py
@@ -153,6 +154,8 @@ Summary: 1 package finished [0.71s]
 ### RUN
 ```bash
 ros2 launch hello_world hello_world_launch.py
+``````bash
+hello_world.py # Updated version 
 ```
 
 #### output
@@ -165,6 +168,122 @@ ros2 launch hello_world hello_world_launch.py
 [helloworld-1] [INFO] [1653935556.075156617] [hello_world]: My first ROS package Hello world
 [helloworld-1] [INFO] [1653935556.174747624] [hello_world]: My first ROS package Hello world
 ```
+
+## Basic ROS Concepts:
+### Param Server:
+A parameter server is a shared, multi-variate dictionary that is accessible via network APIs. Nodes use this server to store and retrieve parameters at runtime. 
+
+### Create a Param file
+```bash
+cd ~/ros2_ws/src/hello_world/ && mkdir config/ && touch config/param.yaml
+```
+```bash
+config/param.yaml
+```
+
+```xml
+text: "Hello_world"
+count: 0 
+```
+
+### Load and Retrieving ROS param 
+
+```bash
+hello_world.launch #Updated version
+```
+
+```python
+import os
+from launch import LaunchDescription
+from launch_ros.actions import Node
+from ament_index_python.packages import get_package_share_directory
+
+def generate_launch_description():
+    ld = LaunchDescription()
+    config = os.path.join(
+    get_package_share_directory('hello_world'),
+    'config',
+    'parameters.yaml'
+    )
+    node1 = Node(
+            package='hello_world',
+            executable='helloworld',
+            output='screen',
+            parameters = [config]
+    )
+    ld.add_action(node1)
+    return ld
+```
+
+### Update setup.py file
+```python
+from setuptools import setup
+import os 
+import glob
+package_name = 'hello_world'
+
+setup(
+    name=package_name,
+    version='0.0.0',
+    packages=[package_name],
+    data_files=[
+        ('share/ament_index/resource_index/packages',
+            ['resource/' + package_name]),
+        ('share/' + package_name, ['package.xml']),
+        ('share/' + package_name, ['launch/hello_world_launch.py']),
+        ('share/' + package_name, ['config/param.yaml'])
+    ],
+    install_requires=['setuptools'],
+    zip_safe=True,
+    maintainer='nullbyte',
+    maintainer_email='nullbyte.in@gmail.com',
+    description='TODO: Package description',
+    license='TODO: License declaration',
+    tests_require=['pytest'],
+    entry_points={
+        'console_scripts': [
+            'helloworld = hello_world.helloworld:main'
+        ],
+    },
+)
+```
+
+```bash
+hello_world.py # Updated version 
+```
+
+```python
+import rclpy
+from rclpy.node import Node
+
+class Hello_World(Node):
+    def __init__(self):
+        super().__init__('hello_world') 
+        self.create_timer(0.1, self.timer_callback)
+        self.declare_parameters(
+            namespace='',
+            parameters=[
+                ('text', "hello world")
+            ])
+
+
+    def timer_callback(self):
+        text = self.get_parameter('text')
+        self.get_logger().info('My first ROS package:"%s"' % text.value)
+
+
+def main(args=None):
+    rclpy.init()  # initialize the ROS communication
+    node = Hello_World() # create object
+    rclpy.spin(node) # Spin the node
+    rclpy.shutdown() # shutdown the ROS communication
+
+if __name__ == '__main__':
+    main()
+```
+
+
+
 
 
 

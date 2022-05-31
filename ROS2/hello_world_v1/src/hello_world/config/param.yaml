@@ -1,0 +1,4 @@
+/**: # This will put all the parameters in every node
+  ros__parameters:
+    text: "Hello_world"
+    count: 0 
