@@ -12,7 +12,8 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         ('share/' + package_name, ['launch/publisher_launch.py']),
-        ('share/' + package_name, ['image_pipeline/publisher.py'])
+        ('share/' + package_name, ['image_pipeline/publisher.py']),
+        ('share/' + package_name, ['image_pipeline/subscriber.py'])
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -23,7 +24,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'img_publisher = image_pipeline.publisher:main'
+            'img_publisher  = image_pipeline.publisher:main',
+            'img_subscriber = image_pipeline.subscriber:main'
         ],
     },
 )
